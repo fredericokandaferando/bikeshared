@@ -34,7 +34,7 @@ class MenuPrincipal extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.search,
                     color: Color.fromARGB(255, 114, 56, 2)),
-                title: const Text("Localizar Estação"),
+                title: const Text("Rastreio de Trajectoria"),
                 onTap: () {
                   // ignore: prefer_const_constructors
                   Navigator.of(context).push(
@@ -44,7 +44,7 @@ class MenuPrincipal extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.search,
+                leading: const Icon(Icons.list,
                     color: Color.fromARGB(255, 114, 56, 2)),
                 title: const Text("Listar Estações"),
                 onTap: () {
