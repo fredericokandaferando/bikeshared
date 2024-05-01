@@ -1,4 +1,7 @@
+import 'package:bikeshared/constantes/shered_preference.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class EstacoesPage extends StatefulWidget {
   @override
@@ -12,31 +15,27 @@ class _EstacoesPageState extends State<EstacoesPage> {
   @override
   void initState() {
     super.initState();
-    // Aqui você pode adicionar dados estáticos para simular interação com o servidor
-    // Por exemplo:
-    estacoes = [
-      Estacao(
-        id: 1,
-        name: 'Estação 1',
-        capacidade: 20,
-        latitude: 40.7128,
-        longitude: -74.0060,
-        premioEntrega: 50,
-        binas_disponiveis: 15,
-        docas_disponiveis: 5,
-      ),
-      Estacao(
-        id: 2,
-        name: 'Estação 2',
-        capacidade: 15,
-        latitude: 34.0522,
-        longitude: -118.2437,
-        premioEntrega: null,
-        binas_disponiveis: 10,
-        docas_disponiveis: 5,
-      ),
-    ];
-    estacoesFiltradas = List.from(estacoes);
+    obterEstacoes(); // Chama a função para obter as estações da API
+  }
+
+  Future<void> obterEstacoes() async {
+    try {
+      final response =
+          await http.get(Uri.parse(MySharedPreferences.ip + "/listarInfo"));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> estacoesJson = jsonDecode(response.body);
+        setState(() {
+          estacoes =
+              estacoesJson.map((json) => Estacao.fromJson(json)).toList();
+          estacoesFiltradas = List.from(estacoes);
+        });
+      } else {
+        throw Exception('Erro ao obter as estações: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Erro ao obter as estações: $e');
+    }
   }
 
   void filtrarEstacoes(String query) {
@@ -128,7 +127,7 @@ class _EstacoesPageState extends State<EstacoesPage> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                          'Bicicletas Disponivel:${estacao.binas_disponiveis.toString()}'),
+                          'Bicicletas Disponível:${estacao.binas_disponiveis.toString()}'),
                     ],
                   ),
                   Text('Docas Livres: ${estacao.docas_disponiveis.toString()}'),
@@ -165,6 +164,19 @@ class Estacao {
     required this.binas_disponiveis,
     required this.docas_disponiveis,
   });
+
+  factory Estacao.fromJson(Map<String, dynamic> json) {
+    return Estacao(
+      id: json['id'],
+      name: json['name'],
+      capacidade: json['capacidade'],
+      latitude: json['latitude'],
+      longitude: json['longitude'],
+      premioEntrega: json['premioEntrega'],
+      binas_disponiveis: json['binas_disponiveis'],
+      docas_disponiveis: int.parse(json['docas_disponiveis'].toString()),
+    );
+  }
 }
 
 class EstacoesSearchDelegate extends SearchDelegate<Estacao> {

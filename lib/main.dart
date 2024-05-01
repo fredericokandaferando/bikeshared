@@ -1,3 +1,5 @@
+import 'package:bikeshared/Usuario/serviceLogin.dart';
+import 'package:bikeshared/constantes/shered_preference.dart';
 import 'package:bikeshared/home_widgets/home_pricipalpage.dart';
 import 'package:flutter/material.dart';
 
@@ -10,10 +12,11 @@ void main() => runApp(
       ),
     );
 
-TextEditingController nomeController = TextEditingController();
+TextEditingController emailControllerr = TextEditingController();
 TextEditingController passwordController = TextEditingController();
 
 final _formKey = GlobalKey<FormState>();
+ServiceLogin login = ServiceLogin();
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -57,15 +60,15 @@ class HomePage extends StatelessWidget {
                     child: Column(
                       children: <Widget>[
                         TextFormField(
-                          controller: nomeController,
+                          controller: emailControllerr,
                           decoration: const InputDecoration(
-                            hintText: "Nome",
+                            hintText: "Email",
                             hintStyle: TextStyle(
                                 color: Color.fromARGB(255, 114, 56, 2)),
                             border: OutlineInputBorder(),
                           ),
-                          validator: (nome) {
-                            if (nome == null || nome.isEmpty) {
+                          validator: (email) {
+                            if (email == null || email.isEmpty) {
                               return 'Digite seu Nome';
                             }
                             return null;
@@ -92,16 +95,11 @@ class HomePage extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
-                              (
-                                nomeController.text,
-                                passwordController.text,
-                                context
-                              );
+                              login.login(emailControllerr.text,
+                                  passwordController.text, context);
+                              MySharedPreferences.useremail =
+                                  emailControllerr.text;
                             }
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (context) => MenuPrincipal()),
-                            );
                           },
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(350, 50),

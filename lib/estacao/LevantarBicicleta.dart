@@ -1,4 +1,8 @@
+import 'package:bikeshared/constantes/shered_preference.dart';
+import 'package:bikeshared/estacao/estacaoService.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class GerirBicicleta extends StatefulWidget {
   @override
@@ -9,34 +13,120 @@ class _GerirBicicletaState extends State<GerirBicicleta> {
   List<Estacao> estacoes = [];
   List<Estacao> estacoesFiltradas = [];
 
+  String endPoint = MySharedPreferences.ip;
+
   @override
   void initState() {
     super.initState();
-    // Aqui você pode adicionar dados estáticos para simular interação com o servidor
-    // Por exemplo:
-    estacoes = [
-      Estacao(
-        id: 1,
-        name: 'Estação 1',
-        capacidade: 20,
-        latitude: 40.7128,
-        longitude: -74.0060,
-        premioEntrega: 50,
-        binas_disponiveis: 15,
-        docas_disponiveis: 5,
-      ),
-      Estacao(
-        id: 2,
-        name: 'Estação 2',
-        capacidade: 15,
-        latitude: 34.0522,
-        longitude: -118.2437,
-        premioEntrega: null,
-        binas_disponiveis: 10,
-        docas_disponiveis: 5,
-      ),
-    ];
-    estacoesFiltradas = List.from(estacoes);
+    obterTodasEstacoes();
+  }
+
+  Future<void> obterTodasEstacoes() async {
+    final response =
+        await http.get(Uri.parse(MySharedPreferences.ip + "/listarInfo"));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> estacoesJson =
+          jsonDecode(utf8.decode(response.bodyBytes));
+      setState(() {
+        estacoes = estacoesJson.map((json) {
+          final estacao = Estacao.fromJson(json);
+          estacao.binas_disponiveis = estacao.binas_disponiveis;
+          estacao.docas_disponiveis = estacao.capacidade;
+          estacao.binas_disponiveis; // Alteração: definir docas como 0
+          return estacao;
+        }).toList();
+        estacoesFiltradas = List.from(estacoes);
+      });
+    } else {
+      throw Exception('Erro ao obter as estações: ${response.statusCode}');
+    }
+  }
+
+  void alugarBicicleta(String email, Estacao estacao) async {
+    final response = await http.post(
+      Uri.parse(
+          '$endPoint/estacao1/alugarBicicleta?email=$email&estacaoId=${estacao.id}'),
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        estacao.binas_disponiveis -= 1;
+        estacao.docas_disponiveis =
+            estacao.capacidade - estacao.binas_disponiveis;
+      });
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Aluguel Sucedido!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Um ponto foi descontado do seu saldo.'),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Ok'),
+              ),
+            ],
+          );
+        },
+      );
+    } else if (response.statusCode == 400) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Oh oh!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Já não tens pontos suficiente.'),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Ok'),
+              ),
+            ],
+          );
+        },
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Erro!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Erro ao tentar alugar.'),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Ok'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   void filtrarEstacoes(String query) {
@@ -45,6 +135,122 @@ class _GerirBicicletaState extends State<GerirBicicleta> {
         return estacao.name.toLowerCase().contains(query.toLowerCase());
       }).toList();
     });
+  }
+
+  void devolverBicicleta(String email, Estacao estacao) async {
+    final response = await http.post(
+      Uri.parse(
+          '$endPoint/estacao1/devolverBicicleta?email=$email&estacaoId=${estacao.id}'),
+    );
+
+    try {
+      print('Resposta do servidor: ${response.body}');
+
+      if (response.statusCode == 200) {
+        // Bicicleta devolvida com sucesso
+        setState(() {
+          estacao.binas_disponiveis += 1;
+          estacao.docas_disponiveis =
+              estacao.capacidade - estacao.binas_disponiveis;
+        });
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Devolução Sucedida!'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Bicicleta devolvida com sucesso.'),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Ok'),
+                ),
+              ],
+            );
+          },
+        );
+      } else if (response.statusCode == 400) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Devolução Inválida!'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('O user não possui um aluguel em andamento'),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Ok'),
+                ),
+              ],
+            );
+          },
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Erro Desconhecido!'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Erro desconhecido ao tentar devolver a bicicleta.'),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Ok'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (error) {
+      print('Erro ao tentar devolver a bicicleta: $error');
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Erro Desconhecido 02!'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Erro desconhecido 02 ao tentar devolver a bicicleta.'),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Ok'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   void exibirInformacoesEstacao(Estacao estacao) {
@@ -57,6 +263,7 @@ class _GerirBicicletaState extends State<GerirBicicleta> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              SizedBox(height: 16),
               Text('Capacidade: ${estacao.capacidade.toString()}'),
               Text('Latitude: ${estacao.latitude.toString()}'),
               Text('Longitude: ${estacao.longitude.toString()}'),
@@ -70,37 +277,41 @@ class _GerirBicicletaState extends State<GerirBicicleta> {
           actions: [
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Fechar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _alugarBicicleta();
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('Deseja alugar bicicleta?'),
+                      actions: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            alugarBicicleta(
+                                MySharedPreferences.useremail, estacao);
+                          },
+                          child: Text('Sim'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Text('Não'),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
               child: Text('Alugar'),
             ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _alugarBicicleta() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Bicicleta Levantada com Sucesso!'),
-          content: Text('A bicicleta foi alugada com sucesso.'),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Ok'),
-            ),
+            if (estacao.binas_disponiveis < estacao.capacidade)
+              ElevatedButton(
+                onPressed: () {
+                  devolverBicicleta(MySharedPreferences.useremail, estacao);
+                  Navigator.of(context).pop();
+                },
+                child: Text('Devolver'),
+              ),
           ],
         );
       },
@@ -108,18 +319,19 @@ class _GerirBicicletaState extends State<GerirBicicleta> {
   }
 
   @override
+  void dispose() {
+    // Fazer a limpeza necessária aqui (cancelar assinaturas, desconectar fluxos, etc.)
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Levantar Bicicleta',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: const Color.fromARGB(255, 114, 56, 2),
+        title: Text('Todas as Estações'),
         actions: [
           IconButton(
             icon: Icon(Icons.search),
-            color: Colors.white,
             onPressed: () {
               showSearch(
                 context: context,
@@ -147,22 +359,43 @@ class _GerirBicicletaState extends State<GerirBicicleta> {
                   Row(
                     children: [
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(7),
+                        borderRadius: BorderRadius.circular(
+                            7), // Define o raio de arredondamento
                         child: Container(
-                          color: Color.fromARGB(255, 28, 150, 244),
-                          padding: EdgeInsets.all(4),
+                          color: Color.fromARGB(255, 28, 150,
+                              244), // Defina a cor de fundo desejada aqui
+                          padding: EdgeInsets.all(
+                              4), // Opcional: Adicione preenchimento para espaçamento
                         ),
                       ),
                       SizedBox(width: 8),
-                      Text(
-                          'Bicicletas Disponivel:${estacao.binas_disponiveis.toString()}'),
+                      Text(estacao.binas_disponiveis.toString()),
                     ],
                   ),
                   Text('Docas Livres: ${estacao.docas_disponiveis.toString()}'),
                 ],
               ),
               onTap: () {
-                exibirInformacoesEstacao(estacao);
+                if (estacao.binas_disponiveis > 0) {
+                  exibirInformacoesEstacao(estacao);
+                } else {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('Não há bicicletas disponíveis.'),
+                        actions: [
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text('Ok'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
               },
             ),
           );
@@ -172,28 +405,7 @@ class _GerirBicicletaState extends State<GerirBicicleta> {
   }
 }
 
-class Estacao {
-  final int id;
-  final String name;
-  final int capacidade;
-  final double latitude;
-  final double longitude;
-  final int? premioEntrega;
-  int binas_disponiveis;
-  int docas_disponiveis;
-
-  Estacao({
-    required this.id,
-    required this.name,
-    required this.capacidade,
-    required this.latitude,
-    required this.longitude,
-    required this.premioEntrega,
-    required this.binas_disponiveis,
-    required this.docas_disponiveis,
-  });
-}
-
+@override
 class EstacoesSearchDelegate extends SearchDelegate<Estacao> {
   final List<Estacao> estacoes;
 
@@ -217,18 +429,18 @@ class EstacoesSearchDelegate extends SearchDelegate<Estacao> {
       icon: Icon(Icons.arrow_back),
       onPressed: () {
         close(
-          context,
-          Estacao(
-            id: 0,
-            name: '',
-            capacidade: 0,
-            latitude: 0,
-            longitude: 0,
-            premioEntrega: 0,
-            binas_disponiveis: 0,
-            docas_disponiveis: 0,
-          ),
-        );
+            context,
+            Estacao(
+              id: 0,
+              name: '',
+              capacidade: 0,
+              latitude: 0,
+              longitude: 0,
+              premioEntrega: 0,
+              binas_disponiveis: 0,
+              docas_disponiveis: 0,
+              premio_entrega: null,
+            ));
       },
     );
   }

@@ -154,8 +154,7 @@ class _DevolverBicicletaState extends State<DevolverBicicleta> {
                         ),
                       ),
                       SizedBox(width: 8),
-                      Text(
-                          'Bicicletas Disponivel:${estacao.binas_disponiveis.toString()}'),
+                      Text('Preminho:${estacao.premioEntrega.toString()}'),
                     ],
                   ),
                   Text('Docas Livres: ${estacao.docas_disponiveis.toString()}'),

@@ -1,10 +1,10 @@
 class Estacao {
-  late final int? id;
-  late final String name;
-  late final int capacidade;
-  late final double? latitude;
-  late final double? longitude;
-  late final double? premioEntrega;
+  final int id;
+  final String name;
+  final int capacidade;
+  final double latitude;
+  final double longitude;
+  final double premioEntrega;
   int binas_disponiveis;
   int docas_disponiveis;
 

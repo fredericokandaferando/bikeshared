@@ -1,3 +1,4 @@
+import 'package:bikeshared/Usuario/serviceUser.dart';
 import 'package:flutter/material.dart';
 
 class home_usuarioRegister extends StatefulWidget {
@@ -13,7 +14,7 @@ class _home_usuarioRegisterState extends State<home_usuarioRegister> {
   TextEditingController senhaController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   //create the service class object
-
+  ServiceResisterUser service = ServiceResisterUser();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,14 +92,8 @@ class _home_usuarioRegisterState extends State<home_usuarioRegister> {
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      (
-                        nomeController.text,
-                        emailController.text,
-                        senhaController.text,
-                        10,
-                        2,
-                        context
-                      );
+                      service.saveUser(10, 2, nomeController.text,
+                          emailController.text, senhaController.text, context);
                     }
                   },
                   style: ElevatedButton.styleFrom(

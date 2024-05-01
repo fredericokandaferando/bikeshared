@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -18,7 +19,8 @@ class _TrackingMapScreenState extends State<TrackingMapScreen> {
     super.initState();
     _location.onLocationChanged.listen((LocationData currentLocation) {
       setState(() {
-        _points.add(LatLng(currentLocation.latitude!, currentLocation.longitude!));
+        _points
+            .add(LatLng(currentLocation.latitude!, currentLocation.longitude!));
       });
       _updateMapCamera(currentLocation.latitude!, currentLocation.longitude!);
     });
@@ -34,7 +36,11 @@ class _TrackingMapScreenState extends State<TrackingMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Rastreamento de Trajetória'),
+        title: Text(
+          'Rastreamento de Trajetória',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: const Color.fromARGB(255, 114, 56, 2),
       ),
       body: GoogleMap(
         initialCameraPosition: CameraPosition(
